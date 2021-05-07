@@ -162,35 +162,34 @@ const getFilterOptions = async () => {
 };
 
 const findProductByCondition = async ({ categoryId, filterOptions }) => {
-  try {
-    const data = await queryBuilder
-      .select('*')
-      .from('product')
-      .where(builder => {
-        if (categoryId) {
-          builder.where('categoryId', categoryId);
-        }
-      })
-      .andWhere(builder => {
-        const filterKeys = Object.keys(filterOptions);
-        const rawCondition = '';
-        Object.entries(filterKeys).forEach((key, value) => (
-          rawCondition.concat(
+  const data = await queryBuilder
+    .select('*')
+    .from('product')
+    .where(builder => {
+      if (categoryId) {
+        builder.where('categoryId', categoryId);
+      }
+    })
+    .andWhere(builder => {
+      let rawCondition = '';
+      for (const [key, value] of Object.entries(filterOptions)) {
+        if (value.length) {
+          rawCondition = rawCondition.concat(
             `OR (${key} IN (${value
               .map(_ => "?")
-              .join(",")}))`
+              .join(",")})) `
           )
-        ));
-        rawCondition.replace(/^\OR\b/g, '');
+        }
+      }
+      rawCondition = rawCondition.replace(/^(OR)/g, '').replace(/(OR)$/g, '');
+      if (rawCondition) {
         builder.whereRaw(
           rawCondition,
-          [...Object.values(filterOptions).map((option) => option)]
+          [...Object.values(filterOptions).flatMap((option) => option)]
         );
-      });
-    return data;
-  } catch (error) {
-    throw new Error(error);
-  }
+      }
+    });
+  return data;
 }
 
 export {
